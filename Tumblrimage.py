@@ -48,7 +48,7 @@ def getImg(url):
 		print(len(imglist))
 		print(imglist)
 		i = 0
-		path = 'Tumblrimgdownload/'
+		path = 'TumblrDownload/img'
 		if not os.path.exists(path):
 			os.makedirs(path)
 		for imgurls in imglist:

@@ -15,6 +15,12 @@ import time
 import traceback
 import PersonalThemeSearch
 import ArchiveSearch
+import sys
+import queue
+
+queue = queue.Queue()
+total_user = []
+f_user = open('user.txt', 'a+')
 
 
 def getHtml(url):
@@ -27,16 +33,18 @@ def getHtml(url):
         print('The URL you requested could not be found')
         return 'Html'
 
+
 def reCodeURL(url):
     reg = '(.*?/post/.*?)/.*'
     urlre = re.compile(reg)
     try:
         newnurl = re.findall(urlre, url)[0]
-        print(url,'=>',newnurl)
+        print(url, '=>', newnurl)
         return newnurl
     except:
-        print(url,'=>')
+        print(url, '=>')
         return url
+
 
 def FindCurrentPagePostUrl(url):
     html = getHtml(url)
@@ -54,17 +62,18 @@ def FindCurrentPagePostUrl(url):
     else:
         return False
 
+
 def FindPage(Homeurl):
     html = getHtml(Homeurl)
-    PageList = {1:Homeurl}
+    PageList = {1: Homeurl}
     reg = r'<a href=".*?" class="next" data-current-page=".*?" data-total-pages="(.*?)">'
     total_pagere = re.compile(reg)
-    total_page = re.findall(total_pagere,html)
+    total_page = re.findall(total_pagere, html)
 
     if total_page:
         PageNum = int(total_page[0])
         print('There is %s pages.' % PageNum)
-        for i in range(2,PageNum+1):
+        for i in range(2, PageNum + 1):
             PageList[i] = Homeurl + 'page/%s' % i
             # print(i,PageList[i])
             i += 1
@@ -74,13 +83,14 @@ def FindPage(Homeurl):
         print('There is only one page.')
         return PageList
 
+
 def FindAllthePostUrl(url):
     PageList = FindPage(url)
 
     if PageList:
         Pagenum = len(PageList)
         PostUrlLists = {}
-        for page in range(1,Pagenum+1):
+        for page in range(1, Pagenum + 1):
             Posturl = FindCurrentPagePostUrl(PageList[page])
             if Posturl:
                 PostUrlLists[page] = Posturl
@@ -88,15 +98,15 @@ def FindAllthePostUrl(url):
             else:
                 print("There is no post in page %s!" % page)
 
-        print(PostUrlLists,'mark')
+        print(PostUrlLists, 'mark')
         return PostUrlLists
 
     else:
         print('There is no page!')
         return False
 
-class ThreadTask(threading.Thread):
 
+class ThreadTask(threading.Thread):
     def __init__(self, PostUrlList):
         super(ThreadTask, self).__init__()
         self.postUrllist = PostUrlList
@@ -110,7 +120,7 @@ class ThreadTask(threading.Thread):
                 print('Something wrong in post %s' % posturl)
 
 
-def DownloadAllthepsot(url):
+def DownloadAllthepost(url):
     Task = []
     DefaultStyle = PersonalThemeSearch.BlogStyleDetection(url)
     # DefaultStyle = True
@@ -123,15 +133,15 @@ def DownloadAllthepsot(url):
     if PostUrlLists:
         PageNum = len(PostUrlLists)
         print(PageNum)
-        for pageNum in range(1,PageNum+1):
+        for pageNum in range(1, PageNum + 1):
             task = ThreadTask(PostUrlLists[pageNum])
             Task.append(task)
-            print('-'*16,'\nThis is thread %s\n' % pageNum,'-'*16)
+            print('-' * 16, '\nThis is thread %s\n' % pageNum, '-' * 16)
 
         for task in Task:
             task.setDaemon(True)
             task.start()
-            print(time.ctime(),'thread %s start' % task)
+            print(time.ctime(), 'thread %s start' % task)
         for task in Task:
             task.join()
         while 1:
@@ -140,9 +150,10 @@ def DownloadAllthepsot(url):
                     continue
                 else:
                     Task.remove(task)
-                    print(time.ctime(),'thread %s is finished' % task)
+                    print(time.ctime(), 'thread %s is finished' % task)
             if len(Task) == 0:
                 break
+
 
 def Main_Post_URLDiscrimination(url):
     post_reg = r'(.*?/post/.*?/*.*)'
@@ -155,35 +166,39 @@ def Main_Post_URLDiscrimination(url):
         print('This is Main page!')
         return True
 
-if __name__ == '__main__':
+
+def main():
+    if len(sys.argv) < 2:
+        print('usage: python TumblrCrawler.py username')
+        sys.exit()
+    username = sys.argv[1]
+    # 修改这里的 username
+    global queue
+    queue.put(username)
     select = 'N'
     reg = r'(http|https)://.*?'
-    while not(select == 'Y'):
-        print('''
-        ---------------------------------
-           Welcome to Tumblr Crawler!
-        ---------------------------------
-        Author:  Sparrow
-        Purpose: downloading images and videos from any Tumblr once.
-        Created: 2017-1.6
-        Version: 5.1
-        Manual: https://github.com/sparrow629/Tumblr_Crawler
-        ''')
-        URL = input('Input url: ')
-        if re.match(reg,URL):
-            try:
-                discrimination = Main_Post_URLDiscrimination(URL)
-                start = time.time()
-                if discrimination:
-                    DownloadAllthepsot(URL)
-                else:
-                    TumblrPostDownload.PostDownload(URL)
-                end = time.time()
-                print(start,end,'=> Cost %ss' % (end-start))
-            except:
-                traceback.print_exc()
-        else:
-            print('Input wrong format.')
+    while not (select == 'Y'):
+        start = time.time()
+        global f_user
+        while not queue.empty():
+            user = queue.get()
+            URL = 'https://' + user + '.tumblr.com/'
+            if re.match(reg, URL):
+                try:
+                    discrimination = Main_Post_URLDiscrimination(URL)
+                    if discrimination:
+                        DownloadAllthepost(URL)
+                    else:
+                        TumblrPostDownload.PostDownload(URL)
+                except:
+                    traceback.print_exc()
+            else:
+                print('Input wrong format.')
+        end = time.time()
+        print(start, end, '=> Cost %ss' % (end - start))
+        f_user.close()
         select = input("Do you want to Quit? [Y/N]")
 
 
+if __name__ == '__main__':
+    main()

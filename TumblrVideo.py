@@ -40,17 +40,19 @@ def getMP4(url):
         print(videopageurl[0])
 
         videohtml = getHtml(videopageurl[0])
-        reg_url = r'<source src="(https://www.tumblr.com/video_file/t:.*?)" type="video/mp4">'
+        reg_url = r'<source src="(https://.*?.tumblr.com/video_file/t:.*?)" type="video/mp4">'
         videore = re.compile(reg_url)
+        videourlList = re.findall(videore, videohtml)
+        print("videourl %s " % videourlList)
         videourl = re.findall(videore, videohtml)[0]
-        print(videourl)
 
         Postname = getPostname(url)
         if len(Postname) > 12:
             Name = Postname[:12]
         else:
             Name = Postname
-        path = 'TumblrMP4download/'
+
+        path = 'TumblrDownload/video'
         if not os.path.exists(path):
             os.makedirs(path)
         target = path + '%s.mp4' % Name
