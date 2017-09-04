@@ -8,6 +8,7 @@ import re
 import urllib.request
 import os
 import traceback
+import TumblrCrawler
 
 
 def getHtml(url):
@@ -48,7 +49,7 @@ def getImg(url):
 		print(len(imglist))
 		print(imglist)
 		i = 0
-		path = 'TumblrDownload/img'
+		path = TumblrCrawler.img_path
 		if not os.path.exists(path):
 			os.makedirs(path)
 		for imgurls in imglist:

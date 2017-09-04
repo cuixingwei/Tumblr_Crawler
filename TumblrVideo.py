@@ -9,6 +9,7 @@ import re
 import urllib.request
 import os
 import traceback
+import TumblrCrawler
 
 def getHtml(url):
     try:
@@ -52,7 +53,7 @@ def getMP4(url):
         else:
             Name = Postname
 
-        path = 'TumblrDownload/video'
+        path = TumblrCrawler.video_path
         if not os.path.exists(path):
             os.makedirs(path)
         target = path + '%s.mp4' % Name

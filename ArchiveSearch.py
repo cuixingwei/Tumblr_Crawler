@@ -9,6 +9,7 @@ import re
 import urllib.request
 import time
 
+
 def getHtml(url):
     try:
         page = urllib.request.urlopen(url)
@@ -19,9 +20,11 @@ def getHtml(url):
         print('The URL you requested could not be found')
         return 'Html'
 
+
 def ArchivePostfix(url):
     URL = url + 'archive'
     return URL
+
 
 def findNextpage(ArchiveURL, url, PageList, PageNum):
     html = getHtml(url)
@@ -33,15 +36,16 @@ def findNextpage(ArchiveURL, url, PageList, PageNum):
         nextpageUrl = ArchiveURL + nextpage[0]
         PageNum += 1
         PageList[PageNum] = nextpageUrl
-        print('Page %s' % PageNum,nextpageUrl)
+        print('Page %s' % PageNum, nextpageUrl)
         findNextpage(ArchiveURL, nextpageUrl, PageList, PageNum)
+
 
 def findAllPage(url):
     archiveURL = ArchivePostfix(url)
-    PageList = {1:archiveURL}
+    PageList = {1: archiveURL}
     PageNum = 1
     findNextpage(archiveURL, archiveURL, PageList, PageNum)
-    print(len(PageList),PageList)
+    print(len(PageList), PageList)
     return PageList
 
 def reCodeURL(url):
@@ -49,11 +53,12 @@ def reCodeURL(url):
     urlre = re.compile(reg)
     try:
         newnurl = re.findall(urlre, url)[0]
-        print(url,'=>',newnurl)
+        print(url, '=>', newnurl)
         return newnurl
     except:
-        print(url,'=>')
+        print(url, '=>')
         return url
+
 
 def FindCurrentPagePostUrl(url):
     html = getHtml(url)
@@ -71,30 +76,31 @@ def FindCurrentPagePostUrl(url):
     else:
         return False
 
+
 def findalltheposturl(url):
     PageList = findAllPage(url)
 
     if PageList:
         Pagenum = len(PageList)
         PostUrlLists = {}
-        for page in range(1,Pagenum+1):
+        for page in range(1, Pagenum + 1):
             Posturl = FindCurrentPagePostUrl(PageList[page])
             if Posturl:
                 PostUrlLists[page] = Posturl
-                print(page,PostUrlLists[page],sep=' ')
+                print(page, PostUrlLists[page], sep=' ')
             else:
                 print("There is no post in page %s!" % page)
 
-        print(PostUrlLists,'mark')
+        print(PostUrlLists, 'mark')
         return PostUrlLists
-
     else:
         print('There is no page!')
         return False
 
+
 if __name__ == '__main__':
     select = 'N'
-    while not(select == 'Y'):
+    while not (select == 'Y'):
         URL = input('Input url: ')
 
         start = time.time()

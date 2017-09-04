@@ -8,12 +8,6 @@ import re
 import urllib.request
 import Tumblrimage
 import TumblrVideo
-import traceback
-from bs4 import BeautifulSoup
-import TumblrCrawler
-import threading
-
-mutex = threading.Lock()
 
 
 def getHtml(url):
@@ -39,28 +33,8 @@ def vedio_image_judge(url):
         return False
 
 
-def findUser(url):
-    html = getHtml(url)
-    reg = r'<a class="reblog-link".*?</a>'
-    userre = re.compile(reg)
-    new_users = re.findall(userre, html)
-    tmp_user = []
-    for user in new_users:
-        soup = BeautifulSoup(user)
-        username = soup.a.text
-        if username and username not in TumblrCrawler.total_user:
-            TumblrCrawler.total_user.append(username)
-            TumblrCrawler.queue.put(username)
-            tmp_user.append(username)
-            print('新用户 %s' % username)
-    mutex.acquire()
-    if tmp_user:
-        TumblrCrawler.f_user.write('\n'.join(tmp_user) + '\n')
-    mutex.release()
-
 
 def PostDownload(url):
-    findUser(url)
 
     Type = vedio_image_judge(url)
 

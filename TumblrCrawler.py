@@ -9,18 +9,19 @@ import re
 import urllib.request
 import threading
 import TumblrPostDownload
-import TumblrVideo
-import Tumblrimage
+from bs4 import BeautifulSoup
 import time
 import traceback
 import PersonalThemeSearch
 import ArchiveSearch
-import sys
 import queue
 
 queue = queue.Queue()
 total_user = []
 f_user = open('user.txt', 'a+')
+img_path = 'F:/BaiduNetdiskDownload/TumblrDownload/img/'
+video_path = 'F:/BaiduNetdiskDownload/TumblrDownload/video/'
+mutex = threading.Lock()
 
 
 def getHtml(url):
@@ -115,6 +116,7 @@ class ThreadTask(threading.Thread):
         for posturl in self.postUrllist:
             try:
                 print(posturl)
+                findUser(posturl)
                 TumblrPostDownload.PostDownload(posturl)
             except:
                 print('Something wrong in post %s' % posturl)
@@ -167,19 +169,39 @@ def Main_Post_URLDiscrimination(url):
         return True
 
 
+def findUser(url):
+    html = getHtml(url)
+    reg = r'<a class="reblog-link".*?</a>'
+    userre = re.compile(reg)
+    new_users = re.findall(userre, html)
+    tmp_user = []
+    for user in new_users:
+        soup = BeautifulSoup(user)
+        username = soup.a.text
+        global total_user
+        if username and username not in total_user:
+            total_user.append(username)
+            global queue
+            queue.put(username)
+            tmp_user.append(username)
+            print('新用户 %s' % username)
+    mutex.acquire()
+    if tmp_user:
+        global f_user
+        f_user.write('\n'.join(tmp_user) + '\n')
+    mutex.release()
+
+
 def main():
-    if len(sys.argv) < 2:
-        print('usage: python TumblrCrawler.py username')
-        sys.exit()
-    username = sys.argv[1]
-    # 修改这里的 username
+    username = input('Input url: ')
     global queue
+    global f_user
+    f_user.write('\n' + username + '\n')
     queue.put(username)
     select = 'N'
     reg = r'(http|https)://.*?'
     while not (select == 'Y'):
         start = time.time()
-        global f_user
         while not queue.empty():
             user = queue.get()
             URL = 'https://' + user + '.tumblr.com/'
@@ -189,14 +211,16 @@ def main():
                     if discrimination:
                         DownloadAllthepost(URL)
                     else:
+                        findUser(posturl)
                         TumblrPostDownload.PostDownload(URL)
                 except:
                     traceback.print_exc()
             else:
                 print('Input wrong format.')
-        end = time.time()
-        print(start, end, '=> Cost %ss' % (end - start))
+                end = time.time()
+                print(start, end, '=> Cost %ss' % (end - start))
         f_user.close()
+
         select = input("Do you want to Quit? [Y/N]")
 
 
