@@ -75,47 +75,6 @@ def judgeFileExistDb(filepath):
         return True
 
 
-def judgeFileExistByName(fileName):
-    """
-    根据文件名称判断是否已下载
-    :param fileName:
-    :return:
-    """
-    sql = 'SELECT * from download_url where filename = %s '
-    data = (fileName)
-    result = MysqlUtil.select(sql, data)
-    if not result:
-        return False
-    else:
-        return True
-
-
-def updateFileInfoToDatabase():
-    """
-    更新数据中记录文件的信息
-    :return:
-    """
-    sql = 'SELECT * from source_md5 where type = %s  '
-    data = ('video')
-    result = MysqlUtil.select(sql, data)
-    for i, e in enumerate(result):
-        fpath = e['path']
-        if FileUtil.fileExist(fpath):
-            videoinfo = FileUtil.getMediaInfo(fpath)
-            if videoinfo:
-                sql = 'update source_md5 set path=%s,duration=%s,file_size=%s,stream_size=%s,frame_rate=%s,' \
-                      'width=%s,height=%s,overall_bit_rate=%s where id= %s '
-                data = (videoinfo['complete_name'], videoinfo['duration'], videoinfo['file_size'],
-                        videoinfo['stream_size'], videoinfo['frame_rate'], videoinfo['width'],
-                        videoinfo['height'], videoinfo['overall_bit_rate'], e['id'])
-                MysqlUtil.excute(sql, data)
-                print('第 %s 个文件' % i, videoinfo)
-        else:
-            print('第 %s 个文件 %s 的不存在' % (i, fpath))
-            sql = 'delete from source_md5  where id= %s '
-            data = (e['id'])
-            MysqlUtil.excute(sql, data)
-
 
 def delFileBySize(video_size, img_size):
     """
@@ -220,7 +179,6 @@ def dealFileAfterDownload():
     calImgMD5ToDatabase()  # 计算图片md5，并存入数据库
     calVideoMD5ToDatabase()  # 计算视频md5，并存入数据库
     delRepeatFileByDB()  # 根据MD5删除重复文件
-    updateFileInfoToDatabase()  # 更新视频信息
     delFileBySize(10 * 1024, 300)  # 删除视频小于10M 图片大小300Kb的图片 删除未下载完整的视频
 
 

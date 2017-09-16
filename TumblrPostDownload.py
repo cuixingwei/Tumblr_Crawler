@@ -9,9 +9,6 @@ import Tumblrimage
 import TumblrVideo
 import MysqlUtil
 import ArchiveSearch
-import LogUtil
-
-logger = LogUtil.getLogger("tumblr")
 
 
 def vedio_image_judge(url):
@@ -20,7 +17,7 @@ def vedio_image_judge(url):
     typere = re.compile(reg)
     type = re.findall(typere, html)
     if type:
-        logger.debug('This is %s' % type[0])
+        print('This is %s' % type[0])
         return type[0]
     else:
         return False

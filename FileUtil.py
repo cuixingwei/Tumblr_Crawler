@@ -8,10 +8,21 @@
 import os
 import hashlib
 import math
-import sys
-from pprint import pprint
 
-from pymediainfo import MediaInfo
+
+def judgeFileExistByName(fileName):
+    """
+    根据文件名称判断是否已下载
+    :param fileName:
+    :return:
+    """
+    sql = 'SELECT * from download_url where filename = %s '
+    data = (fileName)
+    result = MysqlUtil.select(sql, data)
+    if not result:
+        return False
+    else:
+        return True
 
 
 def filecount(dir):
@@ -58,61 +69,5 @@ def fileExist(fpath):
     return os.path.isfile(fpath)
 
 
-def print_frame(text):
-    print("+-{}-+".format("-" * len(text)))
-    print("| {} |".format(text))
-    print("+-{}-+".format("-" * len(text)))
-
-
-def process(fname):
-    media_info = MediaInfo.parse(fname)
-    for track in media_info.tracks:
-        print_frame(track.track_type)
-        pprint(track.to_data())
-    print()
-    for track in media_info.tracks:
-        if track.track_type == 'General' and track.duration:
-            print("Duration: {} sec.".format(track.duration / 1000.0))
-
-
-def getMediaInfo(fname):
-    videoinfo = {}
-    media_info = MediaInfo.parse(fname)
-    for track in media_info.tracks:
-        if track.track_type == 'General':
-            videoinfo['duration'] = math.ceil(track.duration / 1000)
-            videoinfo['file_size'] = math.ceil(track.file_size / 1024)
-            videoinfo['complete_name'] = track.complete_name
-            videoinfo['overall_bit_rate'] = math.ceil(track.overall_bit_rate / 1024)
-        elif track.track_type == 'Video':
-            videoinfo['stream_size'] = math.ceil(track.stream_size / 1024)
-            videoinfo['frame_rate'] = track.frame_rate
-            videoinfo['height'] = track.height
-            videoinfo['width'] = track.width
-    return videoinfo
-
-
-escape_dict = {'\a': r'\a',
-               '\b': r'\b',
-               '\c': r'\c',
-               '\f': r'\f',
-               '\n': r'\n',
-               '\r': r'\r',
-               '\t': r'\t',
-               '\v': r'\v',
-               '\'': r'\'',
-               '\"': r'\"',
-               '\0': r'\0',
-               '\1': r'\1',
-               '\2': r'\2',
-               '\3': r'\3',
-               '\4': r'\4',
-               '\5': r'\5',
-               '\6': r'\6',
-               '\7': r'\7',
-               '\8': r'\8',
-               '\9': r'\9'}
-
 if __name__ == '__main__':
-    localurl = r'F:\BaiduNetdiskDownload\TumblrDownload\video\144698170629.mp4'
-    process(localurl)
+    print('d')

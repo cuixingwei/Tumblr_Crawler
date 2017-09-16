@@ -14,10 +14,7 @@ import string
 import re
 import os
 import traceback
-import LogUtil
-import FileRemoveRepeat
-
-logger = LogUtil.getLogger("tumblr")
+import FileUtil
 
 # 图片下载大小阈值  300Kb
 imagedownsize = 1024 * 300
@@ -149,7 +146,7 @@ def downloadFile(fileurl, filename, filetype, sql, data):
     else:
         print("未知文件类型不下载")
         return
-    if not FileRemoveRepeat.judgeFileExistByName(filename):
+    if not FileUtil.judgeFileExistByName(filename):
         auto_down(fileurl, target, filetype)
         print("新文件 %s  %s 下载" % (fileurl, target))
         MysqlUtil.excute(sql, data)

@@ -7,9 +7,6 @@
 import re
 import RemoteUtil
 import ArchiveSearch
-import LogUtil
-
-logger = LogUtil.getLogger("tumblr")
 
 
 def getVideoUrlList(url):

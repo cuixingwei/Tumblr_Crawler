@@ -14,10 +14,7 @@ import PersonalThemeSearch
 import ArchiveSearch
 import queue
 import math
-import LogUtil
 import FileRemoveRepeat
-
-logger = LogUtil.getLogger("tumblr")
 
 queue = queue.Queue()
 

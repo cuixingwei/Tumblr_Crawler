@@ -11,10 +11,6 @@ from urllib.parse import quote
 import string
 import traceback
 
-import LogUtil
-
-logger = LogUtil.getLogger("tumblr")
-
 
 def getHtml(url):
     try:

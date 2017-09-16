@@ -1202,5 +1202,5 @@ def getVideoCvInfo(localurl):
 
 
 if __name__ == '__main__':
-    localurl = r'F:\BaiduNetdiskDownload\TumblrDownload\video\162711259557.mp4'
+    localurl = r'F:\BaiduNetdiskDownload\TumblrDownload\video\143981524359.mp4'
     getVideoCvInfo(localurl)
