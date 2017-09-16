@@ -6,7 +6,6 @@
 """
 
 import os
-import hashlib
 import MysqlUtil
 import FileUtil
 
@@ -34,9 +33,12 @@ def calImgMD5ToDatabase():
     for i in filedir:
         for tlie in i[2]:
             pathtlie = dir + '\\' + tlie
-            sql = "insert into `source_md5` (`path`,`md5`,`type`) values (%s,%s,%s)"
-            data = (pathtlie, FileUtil.md5sum(pathtlie), 'img')
-            MysqlUtil.excute(sql, data)
+            if not judgeFileExistDb(pathtlie):
+                sql = "insert into `source_md5` (`path`,`md5`,`type`) values (%s,%s,%s)"
+                data = (pathtlie, FileUtil.md5sum(pathtlie), 'img')
+                MysqlUtil.excute(sql, data)
+            else:
+                print("文件 %s md5已经计算出并存入数据库" % pathtlie)
 
 
 def calVideoMD5ToDatabase():
@@ -73,12 +75,27 @@ def judgeFileExistDb(filepath):
         return True
 
 
+def judgeFileExistByName(fileName):
+    """
+    根据文件名称判断是否已下载
+    :param fileName:
+    :return:
+    """
+    sql = 'SELECT * from download_url where filename = %s '
+    data = (fileName)
+    result = MysqlUtil.select(sql, data)
+    if not result:
+        return False
+    else:
+        return True
+
+
 def updateFileInfoToDatabase():
     """
     更新数据中记录文件的信息
     :return:
     """
-    sql = 'SELECT * from source_md5 where type = %s '
+    sql = 'SELECT * from source_md5 where type = %s  '
     data = ('video')
     result = MysqlUtil.select(sql, data)
     for i, e in enumerate(result):
@@ -86,10 +103,11 @@ def updateFileInfoToDatabase():
         if FileUtil.fileExist(fpath):
             videoinfo = FileUtil.getMediaInfo(fpath)
             if videoinfo:
-                sql = 'update source_md5 set path=%s,duration=%s,file_size=%s,stream_size=%s,frame_rate=%s,width=%s,height=%s where id= %s '
+                sql = 'update source_md5 set path=%s,duration=%s,file_size=%s,stream_size=%s,frame_rate=%s,' \
+                      'width=%s,height=%s,overall_bit_rate=%s where id= %s '
                 data = (videoinfo['complete_name'], videoinfo['duration'], videoinfo['file_size'],
                         videoinfo['stream_size'], videoinfo['frame_rate'], videoinfo['width'],
-                        videoinfo['height'], e['id'])
+                        videoinfo['height'], videoinfo['overall_bit_rate'], e['id'])
                 MysqlUtil.excute(sql, data)
                 print('第 %s 个文件' % i, videoinfo)
         else:
@@ -99,13 +117,16 @@ def updateFileInfoToDatabase():
             MysqlUtil.excute(sql, data)
 
 
-def delFileBySize():
+def delFileBySize(video_size, img_size):
     """
-    读取数据库，删除指定大小的文件
+    读取数据库，删除指定大小的视频图片
+    未下载完整
+    位率小于500Kb/s
     :return:
     """
-    sql = 'SELECT * from source_md5 where type= %s and duration < 20   '
-    data = ('video')
+    sql = 'SELECT * from source_md5 where (type= %s and file_size < %s) OR (type= %s and file_size < %s) ' \
+          'OR (type= %s and file_size < stream_size) OR (type= %s and overall_bit_rate < 500) '
+    data = ('video', video_size, 'img', img_size, 'video', 'video')
     delfilecount = 0
     result = MysqlUtil.select(sql, data)
     for i, e in enumerate(result):
@@ -145,8 +166,8 @@ def delRepeatFileByDB():
     删除重复文件，文件md5值记录在数据库中
     :return:
     """
-    sql = 'SELECT * from source_md5 where type= %s '
-    data = ('video')
+    sql = 'SELECT * from source_md5 '
+    data = ()
     all_md5 = {}
     total = 0
     delfilecount = 0
@@ -166,6 +187,42 @@ def delRepeatFileByDB():
     print('共 %s 个文件，删除重复的文件 %s ' % (total, delfilecount))
 
 
+def delRepeatFileByName():
+    sql = 'SELECT * from download_url  '
+    data = ()
+    all_name = []
+    total = 0
+    delfilecount = 0
+    result = MysqlUtil.select(sql, data)
+    for i, e in enumerate(result):
+        total += 1
+        if e['filename'] in all_name:
+            delfilecount += 1
+            print('第几个%d 文件 %s %s  删除' % (i, e['filename'], e["url"]))
+            sql = 'delete from download_url where id= %s '
+            data = (e['id'])
+            MysqlUtil.excute(sql, data)
+        else:
+            print('第几个%d 文件 %s %s 不重复' % (i, e['filename'], e["url"]))
+            all_name.append(e['filename'])
+    print('共 %s 个文件，删除重复的文件 %s ' % (total, delfilecount))
+
+
+def dealFileAfterDownload():
+    """
+    下载完一个用户后
+    处理文件 计算md5 删除重复URL 删除重复文件
+    计算video信息存入数据库
+    删除小于指定大小的图片和视频
+    :return:
+    """
+    delRepeatFileByName()  # 删除下载链接中文件名重复项
+    calImgMD5ToDatabase()  # 计算图片md5，并存入数据库
+    calVideoMD5ToDatabase()  # 计算视频md5，并存入数据库
+    delRepeatFileByDB()  # 根据MD5删除重复文件
+    updateFileInfoToDatabase()  # 更新视频信息
+    delFileBySize(10 * 1024, 300)  # 删除视频小于10M 图片大小300Kb的图片 删除未下载完整的视频
+
+
 if __name__ == '__main__':
-    # updateFileInfoToDatabase()
-    delFileBySize()
+    dealFileAfterDownload()

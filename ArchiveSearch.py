@@ -7,10 +7,13 @@
 
 import re
 import urllib.request
-import time
 from urllib.parse import quote
 import string
 import traceback
+
+import LogUtil
+
+logger = LogUtil.getLogger("tumblr")
 
 
 def getHtml(url):
@@ -21,7 +24,7 @@ def getHtml(url):
         return html
     except:
         traceback.print_exc()
-        print('The URL you requested could not be found')
+        print('The URL you requested could not be found %s ' % url)
         return 'Html'
 
 
@@ -49,7 +52,6 @@ def findAllPage(url):
     PageList = {1: archiveURL}
     PageNum = 1
     findNextpage(archiveURL, archiveURL, PageList, PageNum)
-    print(len(PageList), PageList)
     return PageList
 
 
@@ -62,7 +64,6 @@ def FindPage(Homeurl):
 
     if total_page:
         PageNum = int(total_page[0])
-        print('There is %s pages.' % PageNum)
         for i in range(2, PageNum + 1):
             PageList[i] = Homeurl + 'page/%s' % i
             print(i, PageList[i])
@@ -141,7 +142,7 @@ def FindCurrentPagePostUrl(url):
 
 def findalltheposturl(url):
     PageList = findAllPage(url)
-
+    print(PageList)
     if PageList:
         Pagenum = len(PageList)
         PostUrlLists = {}
@@ -160,14 +161,31 @@ def findalltheposturl(url):
         return False
 
 
+def getFollower(user):
+    url = 'https://' + user + '.tumblr.com/following'
+    html = getHtml(url)
+    reg = r'<a href=".*?" class=".*?" data-current-page=".*?" data-total-pages="(.*?)">'
+    pagere = re.compile(reg)
+    pages = re.findall(pagere, html)
+    follower_list = []
+    if pages:
+        pageNum = int(pages[0])
+    try:
+        for num in range(1, pageNum + 1):
+            pageUrl = url + '/page/' + str(num)
+            html = getHtml(pageUrl)
+            reg = r'<span class="name">(.*?)</span>'
+            fore = re.compile(reg)
+            followers = re.findall(fore, html)
+            if followers:
+                for follower in followers:
+                    if follower not in follower_list:
+                        follower_list.append(follower)
+    except:
+        traceback.print_exc()
+    return follower_list
+
+
 if __name__ == '__main__':
-    select = 'N'
-    while not (select == 'Y'):
-        URL = input('Input url: ')
-
-        start = time.time()
-        findalltheposturl(URL)
-        end = time.time()
-        print(start, end, '=> Cost %ss' % (end - start))
-
-        select = input("Do you want to Quit? [Y/N]")
+    user = r'xwcui'
+    getFollower(user)

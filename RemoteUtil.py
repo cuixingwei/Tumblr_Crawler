@@ -14,12 +14,16 @@ import string
 import re
 import os
 import traceback
+import LogUtil
+import FileRemoveRepeat
 
-# 图片下载大小阈值  250Kb
-imagedownsize = 1024 * 150
+logger = LogUtil.getLogger("tumblr")
 
-# 视频下载大小阈值 5Mb
-videodownsize = 1024 * 1024 * 5
+# 图片下载大小阈值  300Kb
+imagedownsize = 1024 * 300
+
+# 视频下载大小阈值 10Mb
+videodownsize = 1024 * 1024 * 10
 
 img_path = r'E:/BaiduNetdiskDownload/TumblrDownload/img/'
 video_path = r'E:/BaiduNetdiskDownload/TumblrDownload/video/'
@@ -34,6 +38,10 @@ def getHeaders(url):
     headers = {}
     url = quote(url, safe=string.printable)
     try:
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-Agent',
+                              'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36')]
+        urllib.request.install_opener(opener)
         response = urllib.request.urlopen(url)
         headers['ContentLength'] = response.getheader('Content-Length')
         headers['ContentType'] = response.getheader('Content-Type')
@@ -49,7 +57,8 @@ def getHeaders(url):
         headers['Age'] = response.getheader('Age')
         headers['Via'] = response.getheader('Via')
     except:
-        print("封装headers出错")
+        traceback.print_exc()
+        print("封装headers出错 url %s" % url)
     return headers
 
 
@@ -110,7 +119,6 @@ def getUrlFileName(url, filetype):
     namere = re.compile(reg)
     url = quote(url, safe=string.printable)
     nameList = re.findall(namere, url)
-    name = ''
     if nameList:
         name = nameList[0]
     else:
@@ -123,7 +131,7 @@ def getUrlFileName(url, filetype):
     return name
 
 
-def downloadFile(fileurl, filename, filetype):
+def downloadFile(fileurl, filename, filetype, sql, data):
     """
     下载文件
     :param fileurl:
@@ -139,13 +147,33 @@ def downloadFile(fileurl, filename, filetype):
     elif filetype == 'Image':
         target = img_path + filename
     else:
-        print('未知文件类型不下载')
+        print("未知文件类型不下载")
         return
+    if not FileRemoveRepeat.judgeFileExistByName(filename):
+        auto_down(fileurl, target, filetype)
+        print("新文件 %s  %s 下载" % (fileurl, target))
+        MysqlUtil.excute(sql, data)
+    else:
+        print("已存在 %s  %s 不下载" % (fileurl, target))
+
+
+def auto_down(fileurl, target, filetype):
+    """
+    封装自动下载方法，处理网络不稳定下载失败
+    :param fileurl:
+    :param target:
+    :return:
+    """
     try:
         fileurl = quote(fileurl, safe=string.printable)
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-Agent',
+                              'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.75 Safari/537.36')]
+        urllib.request.install_opener(opener)
         urllib.request.urlretrieve(fileurl, target)
     except:
         traceback.print_exc()
+        auto_down(fileurl, target, filetype)
         print('The %s is deleted or not found.' % filetype)
 
 
@@ -162,7 +190,7 @@ def judgeDown(url):
     if filetype:
         if filetype['type'] == "Image":
             if contentLength > imagedownsize:
-                print('下载的 文件网址 %s 大小为 %s Kb 类型 %s 后缀 %s mime类型 %s' % (
+                print('满足下载 %s 大小为 %s Kb 类型 %s 后缀 %s mime类型 %s' % (
                     url, math.ceil(contentLength / 1024), filetype['type'], filetype['ext'], filetype['mine']))
                 result = True
             else:
@@ -171,7 +199,7 @@ def judgeDown(url):
                 result = False
         elif filetype['type'] == "Video":
             if contentLength > videodownsize:
-                print('下载的 文件网址 %s 大小为 %s Kb 类型 %s 后缀 %s mime类型 %s' % (
+                print('满足下载 文件网址 %s 大小为 %s Kb 类型 %s 后缀 %s mime类型 %s' % (
                     url, math.ceil(contentLength / 1024), filetype['type'], filetype['ext'], filetype['mine']))
                 result = True
             else:
@@ -189,61 +217,8 @@ def judgeDown(url):
         filename = getUrlFileName(url, filetype)
         sql = 'insert into download_url (url,filename,size,type,ext,mine) VALUE (%s,%s,%s,%s,%s,%s) '
         data = (url, filename, math.ceil(contentLength / 1024), filetype['type'], filetype['ext'], filetype['mine'])
-        MysqlUtil.excute(sql, data)
-        downloadFile(url, filename, filetype['type'])
+        downloadFile(url, filename, filetype['type'], sql, data)
 
 
 if __name__ == '__main__':
-    urlImgList = ['https://68.media.tumblr.com/667201ba54e5d9c3f9f5e8b026bee1a5/tumblr_od6eavZ3rV1uxoh6yo6_1280.jpg',
-                  'https://68.media.tumblr.com/990908066829f92a4a6509f27411ea08/tumblr_od6eavZ3rV1uxoh6yo2_1280.jpg',
-                  'https://68.media.tumblr.com/afd103d7926081f196c546dd24da5e5a/tumblr_od6eavZ3rV1uxoh6yo7_1280.jpg',
-                  'https://68.media.tumblr.com/e2f75f5b8d1a6bd85644ca25a121a47d/tumblr_od6eavZ3rV1uxoh6yo8_1280.jpg',
-                  'https://68.media.tumblr.com/e2df39f8d672c83afdb4bb966bc1bfb7/tumblr_od6eavZ3rV1uxoh6yo5_1280.jpg',
-                  'https://68.media.tumblr.com/ccbdf724d1393fe8389d694615159857/tumblr_od6eavZ3rV1uxoh6yo3_1280.jpg',
-                  'https://68.media.tumblr.com/e2df39f8d672c83afdb4bb966bc1bfb7/tumblr_od6eavZ3rV1uxoh6yo4_1280.jpg']
-    urlVideoList = [
-        'https://oooxniooo.tumblr.com/video_file/t:k0LztXuyykvtDYa-3VIyIg/139691771794/tumblr_o0jeq9GFLU1ux8oee']
-    url = r'https://68.media.tumblr.com/990908066829f92a4a6509f27411ea08/tumblr_od6eavZ3rV1uxoh6yo2_1280.jpg'
-    list = ['https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/164786216628/tumblr_o4bwvg1T7A1uxmo1u',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/162411143698/tumblr_nuwimcorhK1ur5eqb',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/161737849523/tumblr_o7cmy6WTCv1vu3mul',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/161584922328/tumblr_o1t8oqmJMp1v5ithl/480',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/160783888658/tumblr_nwyz2sMvVs1ua51rq',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/160783559723/tumblr_o59dkgwE1a1sdiiuv',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/159018263478/tumblr_okzg94y1ya1ukpv9m',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/159018037983/tumblr_olx26zG47R1ukpv9m',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/159017619233/tumblr_o63jelp8AG1vq3pfj',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/159004465168/tumblr_o7dr5qtknw1tqr9po',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/159003790378/tumblr_nuf4icRiD01udp704',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158955832883/tumblr_oacbr5dAPP1v9x8wv/480',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158944956303/tumblr_ntxmmiNDTn1uatgt2',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158929345138/tumblr_o5x081SeEm1vqwp3e',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158929271063/tumblr_oac3221GDQ1vnl0qg/480',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158929152913/tumblr_o7ptmehyeN1v079ne',
-            'https://68.media.tumblr.com/34f6b4fc6b6670cb11bf86cfd2339488/tumblr_o2j39oNvvU1v6u3vio1_1280.jpg',
-            'https://68.media.tumblr.com/38d9377ff36c0edd7b4202c9dcf3a503/tumblr_o2j39oNvvU1v6u3vio5_1280.jpg',
-            'https://68.media.tumblr.com/c339f34361d564dd7fb6facbc09b82c9/tumblr_o2j39oNvvU1v6u3vio2_1280.jpg',
-            'https://68.media.tumblr.com/49165f596e351ca05f90f5a64822a4b3/tumblr_o2j39oNvvU1v6u3vio3_1280.jpg',
-            'https://68.media.tumblr.com/3aec473f923469ff30419c58ae7e8381/tumblr_o2j39oNvvU1v6u3vio4_1280.jpg',
-            'https://xwcui.tumblr.com/video_file/t:gmEl28RzcgfmlkEJJ6K4Mw/158929054983/tumblr_o2kwefHViI1u6bsy0',
-            'https://68.media.tumblr.com/0c59587f86a209d025696dcfbe0c6101/tumblr_o2lst01YTi1u6deczo1_500.jpg',
-            'https://68.media.tumblr.com/a115d770389a445619c808c773259201/tumblr_npgc925zAI1t1muopo1_500.jpg',
-            'https://68.media.tumblr.com/3742f0919c162d26cbe3be45b3770c28/tumblr_nxt7yx2Pp21ujccjqo1_1280.jpg',
-            'https://68.media.tumblr.com/183ec94bd6c28cc616ab6e8b2163bdeb/tumblr_nxt7yx2Pp21ujccjqo3_r1_500.jpg',
-            'https://68.media.tumblr.com/1f663a5e9550763f849662e21009c1ee/tumblr_nxt7yx2Pp21ujccjqo4_r1_1280.jpg',
-            'https://68.media.tumblr.com/d8316e51b2c413b865c1d5945457a7ec/tumblr_nxt7yx2Pp21ujccjqo2_r1_400.jpg',
-            'https://68.media.tumblr.com/9184687544d3c44eaf43a2f755fc27de/tumblr_oc14mx0l1x1vqhed4o3_500.jpg',
-            'https://68.media.tumblr.com/620e4f10e5441ec703de737d6b8f3c5f/tumblr_oc14mx0l1x1vqhed4o1_500.jpg',
-            'https://68.media.tumblr.com/309b8a8a0c7be85291634613ac38bfb6/tumblr_oc14mx0l1x1vqhed4o5_500.jpg',
-            'https://68.media.tumblr.com/e468403959cabbeecbfded415e2a873e/tumblr_oc14mx0l1x1vqhed4o9_r1_500.gif',
-            'https://68.media.tumblr.com/bb0fd119565cf6e7b9c080cfd92affa0/tumblr_oc14mx0l1x1vqhed4o2_500.jpg',
-            'https://68.media.tumblr.com/a4d2d3ce8b3a5132020983534f6c9961/tumblr_oc14mx0l1x1vqhed4o4_500.jpg',
-            'https://68.media.tumblr.com/16f00691ef80c815fbb909c2e588a323/tumblr_oc14mx0l1x1vqhed4o6_500.jpg',
-            'https://68.media.tumblr.com/e575c3529a10b2fce9aa0c16df0511b8/tumblr_oc14mx0l1x1vqhed4o7_500.jpg',
-            'https://68.media.tumblr.com/a99364aca1e2c11749473f874430523b/tumblr_oc14mx0l1x1vqhed4o8_500.jpg']
-    print(len(list))
-    n = int(math.ceil(len(list) / float(10)))
-    l = [list[i:i + n] for i in range(0, len(list), n)]
-    print(l)
-    for i in range(0, len(list), n):
-        print(i)
+    user = 'fefe'

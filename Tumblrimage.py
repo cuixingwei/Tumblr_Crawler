@@ -5,10 +5,12 @@
   Created: 2017-1.1
 """
 import re
-import os
-import TumblrCrawler
 import RemoteUtil
 import ArchiveSearch
+
+import LogUtil
+
+logger = LogUtil.getLogger("tumblr")
 
 
 def getImageUrlList(url):
@@ -24,7 +26,6 @@ def getImageUrlList(url):
     imglist = list(set(imglist_none))
     if imglist:
         imgurl_list = []
-        print(len(imglist), imglist)
         for imgurls in imglist:
             imgurl_list.append(imgurls[0])
         return imgurl_list

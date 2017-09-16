@@ -83,6 +83,7 @@ def getMediaInfo(fname):
             videoinfo['duration'] = math.ceil(track.duration / 1000)
             videoinfo['file_size'] = math.ceil(track.file_size / 1024)
             videoinfo['complete_name'] = track.complete_name
+            videoinfo['overall_bit_rate'] = math.ceil(track.overall_bit_rate / 1024)
         elif track.track_type == 'Video':
             videoinfo['stream_size'] = math.ceil(track.stream_size / 1024)
             videoinfo['frame_rate'] = track.frame_rate
@@ -112,15 +113,6 @@ escape_dict = {'\a': r'\a',
                '\8': r'\8',
                '\9': r'\9'}
 
-
-def raw(text):
-    new_string = ''
-    for char in text:
-        try:
-            new_string += escape_dict[char]
-        except KeyError:
-            new_string += char
-    return new_string
 if __name__ == '__main__':
-    localurl = r'F:\BaiduNetdiskDownload\TumblrDownload\video\162711259557.mp4'
+    localurl = r'F:\BaiduNetdiskDownload\TumblrDownload\video\144698170629.mp4'
     process(localurl)

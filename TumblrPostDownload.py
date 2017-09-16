@@ -9,6 +9,9 @@ import Tumblrimage
 import TumblrVideo
 import MysqlUtil
 import ArchiveSearch
+import LogUtil
+
+logger = LogUtil.getLogger("tumblr")
 
 
 def vedio_image_judge(url):
@@ -17,7 +20,7 @@ def vedio_image_judge(url):
     typere = re.compile(reg)
     type = re.findall(typere, html)
     if type:
-        print('This is %s' % type[0])
+        logger.debug('This is %s' % type[0])
         return type[0]
     else:
         return False
@@ -60,55 +63,17 @@ def updateUserToDB(username):
     MysqlUtil.excute(sql, data)
 
 
-def FindUser(url):
-    """
-    发现post页面的新用户
-    :param url:
-    :return:
-    """
-    html = ArchiveSearch.getHtml(url)
-    reg = r'<a class="reblog-link" .*? data-blog-card-username="(.*?)">'
-    userre = re.compile(reg)
-    new_users = re.findall(userre, html)
-    if new_users:
-        new_users = list(set(new_users))
-    tmp_user = []
-    for username in new_users:
-        tmp_user.append(username)
-    return tmp_user
-
-
 def PostDownload(url):
     Type = vedio_image_judge(url)
-
     if Type == 'video':
         TumblrVideo.getMP4(url)
     elif (Type == 'photoset') or (Type == 'photo'):
-        Tumblrimage.getImg(url)
+        print("不下图片")
+        # Tumblrimage.getImg(url)
     else:
         print('There is nothing!')
 
 
-def getAllUrl(url):
-    """
-    根据POST URL返回所有文件URL
-    :param url:
-    :return:
-    """
-    Type = vedio_image_judge(url)
-    if Type == 'video':
-        tempUrl = TumblrVideo.getVideoUrlList(url)
-    elif (Type == 'photoset') or (Type == 'photo'):
-        tempUrl = Tumblrimage.getImageUrlList(url)
-    else:
-        return False
-    return tempUrl
-
-
 if __name__ == '__main__':
-    select = 'N'
-    while not (select == 'Y'):
-        URL = input('Input url: ')
-        # URL = 'https://24k-k42.tumblr.com/post/151463716357/ktv系列4'
-        PostDownload(URL)
-        select = input("Do you want to Quit? [Y/N]")
+    URL = r'https://shoottttttt.tumblr.com/post/162499930155'
+    PostDownload(URL)
